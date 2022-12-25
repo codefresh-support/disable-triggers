@@ -60,3 +60,17 @@ export interface CLIArguments {
   command: Command;
   flags: Flags;
 }
+
+export interface CodefreshCLIConfigContext {
+  type: string;
+  name: string;
+  url: string;
+  token: string;
+  beta: boolean;
+  onPrem: boolean;
+}
+
+export interface CodefreshCLIConfig {
+  contexts: Record<string, CodefreshCLIConfigContext>;
+  'current-context': string;
+}
