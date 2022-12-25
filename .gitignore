@@ -1,0 +1,4 @@
+.vscode/settings.json
+deno.lock
+*.env
+/bin
