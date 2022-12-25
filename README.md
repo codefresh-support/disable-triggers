@@ -4,7 +4,7 @@ Small CLI which allows you to disable all pipeline triggers at once — with the
 
 ## Installation
 
-Please dowload latest binary from [Releases section](https://github.com/z-tikhonov-codefresh/cf-triggers/releases/latest).
+Please dowload latest binary from [Releases section](https://github.com/codefresh-support/disable-triggers/releases).
 
 ## Usage
 
