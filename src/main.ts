@@ -6,7 +6,7 @@ try {
   const {
     command,
     flags: { token, host, pipelineId, terminateBuilds, deleteTriggers },
-  } = parseFlags(Deno.args);
+  } = await parseFlags(Deno.args);
 
   const service = new PipelineService(new CodefreshHttpClient(token, host));
 
