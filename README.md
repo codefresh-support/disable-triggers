@@ -1,4 +1,4 @@
-# CF-triggers
+# Disable triggers
 
 Small CLI which allows you to disable all pipeline triggers at once — with the ability to reenable it back!
 
