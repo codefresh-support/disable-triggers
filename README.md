@@ -18,9 +18,10 @@ It disables git triggers (with optional removal of non-git ones) and stores all 
 
 #### Flags
 
-* `--token` [ required ] — your codefresh token
-* `--pipeline-id` [ required ] — ID of target pipeline
+* `--token` [ required ] — your codefresh token.
+* `--pipeline-id` [ required ] — ID of target pipeline.
 * `--delete-triggers` [ optional ] — if set, non-git triggers will be removed. It's impossible to _disable_ non-git triggers, so the only way is to delete them.
+* `--host` [ optional, defaults to `https://g.codefresh.io` ] — if set, will be used for API calls.
 
 #### Examples
 
@@ -39,8 +40,9 @@ Once it's done, it removes the above annotations.
 
 #### Flags
 
-* `--token` [ required ] — your codefresh token
-* `--pipeline-id` [ required ] — ID of target pipeline
+* `--token` [ required ] — your codefresh token.
+* `--pipeline-id` [ required ] — ID of target pipeline.
+* `--host` [ optional, defaults to `https://g.codefresh.io` ] — if set, will be used for API calls.
 
 #### Examples
 
