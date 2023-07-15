@@ -1,6 +1,7 @@
 import { CodefreshHttpClient } from './codefresh.http-client.ts';
 import { PipelineService } from './pipeline.service.ts';
 import { parseFlags } from './parse-flags.ts';
+import { logger } from './logger.service.ts';
 
 try {
   const {
@@ -12,7 +13,7 @@ try {
 
   if (command === 'disable') {
     if (terminateBuilds) {
-      console.warn(
+      logger.warn(
         '⚠️ Active builds termination currently not implemented and will be skipped.',
       );
       // TODO: terminate all active builds for given pipeline
@@ -32,6 +33,6 @@ try {
     await service.reenableTriggers(pipelineId);
   }
 } catch (error) {
-  console.error(`❌ ${error.name}: ${error.message}`);
+  logger.error(`❌ ${error.name}: ${error.message}`);
   Deno.exit(1);
 }

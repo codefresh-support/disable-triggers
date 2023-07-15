@@ -1,9 +1,10 @@
-import { parseDenoFlags } from './deps.ts';
-import { BASE_URL, COMMANDS } from './const.ts';
 import { CodefreshCLIService } from './codefresh-cli.service.ts';
+import { BASE_URL, COMMANDS } from './const.ts';
+import { parseDenoFlags } from './deps.ts';
 import { ValidationError } from './errors.ts';
-import type { CLIArguments, Command } from './types.ts';
 import { loadCLIConfig } from './load-cli-config.ts';
+import { logger } from './logger.service.ts';
+import type { CLIArguments, Command } from './types.ts';
 
 const isKnownCommand = (
   command: string,
@@ -15,6 +16,14 @@ export const parseFlags = async (
   args: typeof Deno['args'],
 ): Promise<CLIArguments> => {
   const [command, ...flags] = args;
+
+  if (!command) {
+    throw new ValidationError(
+      `Command has not been passed. Please use one of these: ${
+        COMMANDS.join(', ')
+      }.`,
+    );
+  }
 
   if (!isKnownCommand(command)) {
     throw new ValidationError(
@@ -36,7 +45,7 @@ export const parseFlags = async (
   });
 
   if (parsedFlags['use-cfconfig']) {
-    console.log(
+    logger.log(
       '📃 "--use-cfconfig" was enabled. "--token" and "--host" will be ignored even if passed',
     );
     const cliService = new CodefreshCLIService(
@@ -45,14 +54,14 @@ export const parseFlags = async (
     const targetContextName = parsedFlags['cfconfig-context'] ||
       cliService.getCurrentContext();
     parsedFlags['cfconfig-context'] ||
-      console.log(`⚠️ "--cfconfig-context" was not set, using current context`);
+      logger.log(`⚠️ "--cfconfig-context" was not set, using current context`);
     const targetContext = cliService.getContextByName(targetContextName);
     if (!targetContext) {
       throw new ValidationError(
         `Context ${targetContextName} was not found in CLI config`,
       );
     }
-    console.log(
+    logger.log(
       `✅ Context "${targetContextName}" was loaded. Host: "${targetContext.url}"`,
     );
     parsedFlags['token'] = targetContext.token;
