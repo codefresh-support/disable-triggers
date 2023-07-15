@@ -90,6 +90,7 @@ export class CodefreshHttpClient {
   public async createTriggerForPipeline(
     event: string,
     pipelineId: string,
+    body: any,
   ): Promise<void> {
     const encodedEvent = encodeURIComponent(encodeURIComponent(event));
     const url = new URL(
@@ -99,6 +100,7 @@ export class CodefreshHttpClient {
     const response = await fetch(url, {
       method: 'POST',
       headers: this.#headers,
+      body: JSON.stringify(body),
     });
 
     if (response.status === 404) {
@@ -124,9 +126,7 @@ export class CodefreshHttpClient {
     });
 
     if (response.status === 404) {
-      throw new NotFoundError(
-        `Entity #${entityId} was not found or has no annotations`,
-      );
+      return [];
     }
 
     return response.ok ? response.json() : this.#handleErrors(response);
