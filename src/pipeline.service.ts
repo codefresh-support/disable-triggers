@@ -1,6 +1,7 @@
 import { CodefreshHttpClient } from './codefresh.http-client.ts';
 import { DELETED_TRIGGERS_KEY, DISABLED_TRIGGERS_KEY } from './const.ts';
-import type { Annotation } from './types.ts';
+import { base64 } from './deps.ts';
+import type { Annotation, Trigger } from './types.ts';
 
 export class PipelineService {
   #httpClient: CodefreshHttpClient;
@@ -82,7 +83,7 @@ export class PipelineService {
       pipelineId,
       'pipeline',
       DELETED_TRIGGERS_KEY,
-      triggerURIsToDelete,
+      base64.encode(JSON.stringify(triggers)),
     );
     if (annotation) {
       console.log(
@@ -143,26 +144,35 @@ export class PipelineService {
     const deletedTriggersAnnotation = annotations.find((annotation) =>
       annotation.key === DELETED_TRIGGERS_KEY
     );
-    const deletedTriggers = <string[] | undefined> deletedTriggersAnnotation
-      ?.value;
-    if (!deletedTriggers) {
+    if (!deletedTriggersAnnotation?.value) {
       console.log(
         '📃 There are no previously deleted triggers, nothing to create',
       );
       return;
     }
+
+    const deletedTriggers: Trigger<true>[] = JSON.parse(
+      new TextDecoder().decode(base64.decode(deletedTriggersAnnotation.value)),
+    );
+    const deletedTriggersURIs = deletedTriggers.map((trigger) =>
+      trigger['event-data'].uri
+    );
     console.log(
       '📃 Following triggers will be created:\n\t',
-      deletedTriggers,
+      deletedTriggersURIs,
     );
     await Promise.all(
-      deletedTriggers.map((URI) =>
-        this.#httpClient.createTriggerForPipeline(URI, pipelineId)
+      deletedTriggers.map((trigger) =>
+        this.#httpClient.createTriggerForPipeline(
+          trigger['event-data'].uri,
+          pipelineId,
+          trigger,
+        )
       ),
     );
     console.log(
       '✅ Following triggers were created:\n\t',
-      deletedTriggers,
+      deletedTriggersURIs,
     );
 
     await this.#httpClient.deleteAnntotation(
