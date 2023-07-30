@@ -20,7 +20,8 @@ disabled/removed triggers in pipeline annotations `disabled_git_triggers` and
 
 - `--token` [ required ] — your codefresh token. Will be ignored if
   `--use-cfconfig` was set.
-- `--pipeline-id` [ required ] — ID of target pipeline.
+- `--pipeline-id` [ required unless `--project-id` is set ] — ID of target pipeline.
+- `--project-id` [ required unless `--pipeline-id` is set ] — ID of target project.
 - `--delete-triggers` [ optional, defaults to `false` ] — if set, non-git
   triggers will be removed. It's impossible to _disable_ non-git triggers, so
   the only way is to delete them.

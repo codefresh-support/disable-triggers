@@ -1,5 +1,7 @@
 import { loadYaml, resolvePath } from './deps.ts';
 import { NotFoundError, ValidationError } from './errors.ts';
+import { logger } from './logger.service.ts';
+
 import type { CodefreshCLIConfig } from './types.ts';
 
 export const loadCLIConfig = async (
@@ -7,18 +9,18 @@ export const loadCLIConfig = async (
 ): Promise<CodefreshCLIConfig> => {
   try {
     if (!path) {
-      console.log('📃 Path to CLI config was not set. Using default path');
+      logger.log('📃 Path to CLI config was not set. Using default path');
       const HOME = Deno.env.get(
         Deno.build.os === 'windows' ? 'USERPROFILE' : 'HOME',
       );
       if (!HOME) {
         throw new Error(
-          '❌ Unable to resolve path to HOME in order to load default CLI config',
+          'Unable to resolve path to HOME in order to load default CLI config',
         );
       }
       path = resolvePath(HOME, '.cfconfig');
     }
-    console.log(`📃 Loading CLI config from "${path}"`);
+    logger.log(`📃 Loading CLI config from "${path}"`);
     const config = await Deno.readTextFile(path);
     const parsedConfig = <CodefreshCLIConfig> loadYaml(config);
     if (
@@ -29,7 +31,7 @@ export const loadCLIConfig = async (
       typeof parsedConfig.contexts === 'object' &&
       parsedConfig.contexts !== null
     ) {
-      console.log('✅ CLI config was successfully loaded');
+      logger.log('✅ CLI config was successfully loaded');
       return parsedConfig;
     }
     throw new ValidationError('Invalid CLI config');

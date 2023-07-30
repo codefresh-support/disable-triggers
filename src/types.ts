@@ -3,16 +3,25 @@ import { COMMANDS } from './const.ts';
 //  API
 
 export interface GitTrigger {
+  type: 'git';
   name: string;
   disabled: boolean;
 }
 
 export interface Pipeline {
   spec: { triggers: GitTrigger[] };
-  metadata: { revision: number };
+  metadata: {
+    id: string;
+    name: string;
+    revision: number;
+  };
 }
 
-type EventType = 'cron';
+type EventType = 'cron' | 'registry' | 'helm';
+
+interface Filters {
+  tag: string;
+}
 
 interface EventData<WithEvent extends boolean> {
   description: WithEvent extends true ? string : undefined;
@@ -28,6 +37,7 @@ interface EventData<WithEvent extends boolean> {
 export interface Trigger<WithEvent extends boolean> {
   event: string;
   pipeline: string;
+  filters?: Filters;
   'event-data': EventData<WithEvent>;
 }
 
@@ -38,23 +48,77 @@ export interface Annotation {
   accountId: string;
   entityId: string;
   key: string;
+  // deno-lint-ignore no-explicit-any
   value: any;
+  // deno-lint-ignore no-explicit-any
   type: any;
   entityType: EntityType;
+}
+
+export interface GetPipelinesParams {
+  offset?: number;
+  id?: number;
+  limit?: number;
+  labels?: string;
+  projectId?: string;
+  executionContextId?: string;
+  executionContextName?: string;
+}
+
+export interface Pipelines {
+  docs: Pipeline[];
+  count: number;
+}
+
+export interface Build {
+  id: string;
+}
+
+export interface Pagination {
+  sessionId: string | null;
+  page: number;
+  pageSize: number;
+  firstId: string | null;
+  lastId: string | null;
+  nextPage: boolean;
+  prevPage: boolean;
+}
+
+export interface Builds {
+  workflows: { docs: Build[] };
+  pagination: Pagination;
+}
+
+export interface GetBuildsParams {
+  limit?: number;
+  page?: number;
+  status?: string;
+  pipeline?: string;
 }
 
 //  Internal
 
 export type Command = typeof COMMANDS[number];
 
-export interface Flags {
+interface BaseFlags {
   token: string;
-  pipelineId: string;
   terminateBuilds: boolean;
   deleteTriggers: boolean;
   host: string;
   interactive?: boolean;
 }
+
+interface FlagsWithPipelineId extends BaseFlags {
+  pipelineId: string;
+  projectId?: never;
+}
+
+interface FlagsWithProjectId extends BaseFlags {
+  pipelineId?: never;
+  projectId: string;
+}
+
+export type Flags = FlagsWithPipelineId | FlagsWithProjectId;
 
 export interface CLIArguments {
   command: Command;

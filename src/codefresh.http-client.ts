@@ -1,5 +1,13 @@
 import { NotFoundError } from './errors.ts';
-import type { Annotation, EntityType, Pipeline, Trigger } from './types.ts';
+
+import type {
+  Annotation,
+  EntityType,
+  GetPipelinesParams,
+  Pipeline,
+  Pipelines,
+  Trigger,
+} from './types.ts';
 
 export class CodefreshHttpClient {
   #baseUrl: string;
@@ -36,6 +44,39 @@ export class CodefreshHttpClient {
     }
 
     return response.ok ? response.json() : this.#handleErrors(response);
+  }
+
+  public async getPipelines(params: GetPipelinesParams): Promise<Pipelines> {
+    const url = new URL('api/pipelines', this.#baseUrl);
+    for (const [key, value] of Object.entries(params)) {
+      url.searchParams.set(key, String(value));
+    }
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: this.#headers,
+    });
+
+    return response.ok ? response.json() : this.#handleErrors(response);
+  }
+
+  public async *getAllPipelinesGenerator(
+    params: GetPipelinesParams,
+  ): AsyncGenerator<Pipelines> {
+    const limit = params.limit ?? 10;
+    let offset = params.offset ?? 0;
+    let done = false;
+
+    while (!done) {
+      const response = await this.getPipelines({
+        ...params,
+        offset: offset,
+        limit: limit,
+      });
+      offset += limit === 0 ? response.docs.length : limit;
+      done = offset >= response.count;
+      yield response;
+    }
   }
 
   public async replacePipeline(
@@ -87,12 +128,12 @@ export class CodefreshHttpClient {
     return response.ok ? undefined : this.#handleErrors(response);
   }
 
-  public async createTriggerForPipeline(
+  public async createTriggerForPipeline<WithEvent extends boolean>(
     event: string,
     pipelineId: string,
-    body: any,
+    data?: Trigger<WithEvent>,
   ): Promise<void> {
-    const encodedEvent = encodeURIComponent(encodeURIComponent(event));
+    const encodedEvent = encodeURIComponent(encodeURIComponent(event)); // Don't ask me why, but it's really needed to be done twice
     const url = new URL(
       `api/hermes/triggers/${encodedEvent}/${pipelineId}`,
       this.#baseUrl,
@@ -100,7 +141,7 @@ export class CodefreshHttpClient {
     const response = await fetch(url, {
       method: 'POST',
       headers: this.#headers,
-      body: JSON.stringify(body),
+      ...data && { body: JSON.stringify(data) },
     });
 
     if (response.status === 404) {
