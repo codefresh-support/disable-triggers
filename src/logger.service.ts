@@ -8,7 +8,7 @@ const LogLevel = {
 } as const;
 type LogLevel = typeof LogLevel[keyof typeof LogLevel];
 
-class LoggerService {
+class Logger {
   #outputPath: string;
   #output: Deno.FsFile;
   #minimalLevel: LogLevel;
@@ -25,42 +25,53 @@ class LoggerService {
       'unload',
       this.#output.close.bind(this.#output),
     );
+
+    this.log(`💡 Full logs will be stored at "${this.#outputPath}"`);
   }
 
   setLevel(level: LogLevel): void {
     this.#minimalLevel = level;
   }
 
+  // deno-lint-ignore no-explicit-any
   #write(level: keyof typeof LogLevel, ...data: any[]): void {
-    for (const item of data) {
-      this.#output.writeSync(
-        new TextEncoder().encode(
-          `${new Date().toISOString()}\t${level}\t${
-            typeof item === 'string' ? item : JSON.stringify(item)
-          }\n`,
-        ),
-      );
-    }
+    this.#output.writeSync(
+      new TextEncoder().encode(
+        `${
+          JSON.stringify({
+            time: new Date().toISOString(),
+            level,
+            data,
+          })
+        }\n`,
+      ),
+    );
 
     LogLevel[level] >= this.#minimalLevel && console[level](...data);
   }
 
+  // deno-lint-ignore no-explicit-any
   debug(...data: any[]): void {
     this.#write('debug', ...data);
   }
 
+  // deno-lint-ignore no-explicit-any
   log(...data: any[]): void {
     this.#write('log', ...data);
   }
 
+  // deno-lint-ignore no-explicit-any
   warn(...data: any[]): void {
     this.#write('warn', ...data);
   }
 
+  // deno-lint-ignore no-explicit-any
   error(...data: any[]): void {
     this.#write('error', ...data);
   }
 }
 
 const output = resolvePath(Deno.cwd(), `output-${Date.now()}.log`);
-export const logger = new LoggerService(output);
+
+export const logger = new Logger(output);
+export type LoggerService = Logger;

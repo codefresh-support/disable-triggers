@@ -14,7 +14,7 @@ Deno.test('Load CLI config', async (t) => {
         await asserts.assertRejects(
           loadCLIConfig,
           Error,
-          '❌ Unable to resolve path to HOME in order to load default CLI config',
+          'Unable to resolve path to HOME in order to load default CLI config',
         );
         homeEnvValue && Deno.env.set(homeEnvName, homeEnvValue);
       },

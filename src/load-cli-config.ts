@@ -1,6 +1,7 @@
 import { loadYaml, resolvePath } from './deps.ts';
 import { NotFoundError, ValidationError } from './errors.ts';
 import { logger } from './logger.service.ts';
+
 import type { CodefreshCLIConfig } from './types.ts';
 
 export const loadCLIConfig = async (
@@ -14,7 +15,7 @@ export const loadCLIConfig = async (
       );
       if (!HOME) {
         throw new Error(
-          '❌ Unable to resolve path to HOME in order to load default CLI config',
+          'Unable to resolve path to HOME in order to load default CLI config',
         );
       }
       path = resolvePath(HOME, '.cfconfig');

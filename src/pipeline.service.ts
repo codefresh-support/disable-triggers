@@ -1,7 +1,8 @@
-import { CodefreshHttpClient } from './codefresh.http-client.ts';
 import { DELETED_TRIGGERS_KEY, DISABLED_TRIGGERS_KEY } from './const.ts';
 import { base64 } from './deps.ts';
 import { logger } from './logger.service.ts';
+
+import type { CodefreshHttpClient } from './codefresh.http-client.ts';
 import type { Annotation, Trigger } from './types.ts';
 
 export class PipelineService {
@@ -11,7 +12,7 @@ export class PipelineService {
     this.#httpClient = httpClinet;
   }
 
-  public async disableGitTriggers(pipelineId: string): Promise<void> {
+  public async disableGitTriggersByPipeline(pipelineId: string): Promise<void> {
     const pipeline = await this.#httpClient.getPipeline(pipelineId);
 
     const enabledGitTriggers = pipeline.spec.triggers.filter((trigger) =>
@@ -19,7 +20,9 @@ export class PipelineService {
     );
 
     if (enabledGitTriggers.length === 0) {
-      logger.log('📃 There are no enabled git triggers, nothing to disable');
+      logger.log(
+        `[Pipeline #${pipelineId}] There are no enabled git triggers, nothing to disable`,
+      );
       return;
     }
 
@@ -28,13 +31,13 @@ export class PipelineService {
       return trigger.name;
     });
     logger.log(
-      '📃 Following git triggers will be disabled:\n\t',
+      `[Pipeline #${pipelineId}] Following git triggers will be disabled: `,
       gitTriggersToDisable,
     );
 
     await this.#httpClient.replacePipeline(pipelineId, pipeline);
     logger.log(
-      '✅ Following git triggers were disabled:\n\t',
+      `[Pipeline #${pipelineId}] Following git triggers were disabled: `,
       gitTriggersToDisable,
     );
 
@@ -46,20 +49,25 @@ export class PipelineService {
     );
     if (annotation) {
       logger.log(
-        `✅ "${DISABLED_TRIGGERS_KEY}" annotation was added to the pipeline`,
+        `[Pipeline #${pipelineId}] "${DISABLED_TRIGGERS_KEY}" annotation was added to the pipeline`,
       );
     } else {
-      logger.error(`❌ Unable to add "${DISABLED_TRIGGERS_KEY}" annotation`);
+      logger.error(
+        `[Pipeline #${pipelineId}] Unable to add "${DISABLED_TRIGGERS_KEY}" annotation`,
+      );
     }
   }
 
-  public async deleteTriggers(pipelineId: string): Promise<void> {
+  public async deleteTriggersByPipeline(pipelineId: string): Promise<void> {
     const triggers = await this.#httpClient.getPipelineTriggers(
       pipelineId,
       true,
     );
+    logger.debug(`[Pipeline #${pipelineId}] Triggers to be deleted:`, triggers);
     if (!triggers) {
-      logger.log('📃 There are no triggers, nothing to delete');
+      logger.log(
+        `[Pipeline #${pipelineId}] There are no triggers, nothing to delete`,
+      );
       return;
     }
 
@@ -67,7 +75,7 @@ export class PipelineService {
       trigger['event-data'].uri
     );
     logger.log(
-      '📃 Following triggers will be deleted:\n\t',
+      `[Pipeline #${pipelineId}] Following triggers will be deleted: `,
       triggerURIsToDelete,
     );
     await Promise.all(
@@ -76,7 +84,7 @@ export class PipelineService {
       ),
     );
     logger.log(
-      '✅ Following triggers were deleted:\n\t',
+      `[Pipeline #${pipelineId}] Following triggers were deleted: `,
       triggerURIsToDelete,
     );
 
@@ -88,10 +96,12 @@ export class PipelineService {
     );
     if (annotation) {
       logger.log(
-        `✅ "${DELETED_TRIGGERS_KEY}" annotation was added to the pipeline`,
+        `[Pipeline #${pipelineId}] "${DELETED_TRIGGERS_KEY}" annotation was added to the pipeline`,
       );
     } else {
-      logger.error(`❌ Unable to add "${DELETED_TRIGGERS_KEY}" annotation`);
+      logger.error(
+        `[Pipeline #${pipelineId}] Unable to add "${DELETED_TRIGGERS_KEY}" annotation`,
+      );
     }
   }
 
@@ -109,7 +119,7 @@ export class PipelineService {
     > disabledTriggersAnnotation?.value;
     if (!disabledGitTriggers) {
       logger.log(
-        '📃 There are no previously disabled git triggers, nothing to enable',
+        `[Pipeline #${pipelineId}] There are no previously disabled git triggers, nothing to enable`,
       );
       return;
     }
@@ -119,12 +129,12 @@ export class PipelineService {
       }
     });
     logger.log(
-      '📃 Following git triggers will be enabled:\n\t',
+      `[Pipeline #${pipelineId}] Following git triggers will be enabled: `,
       disabledGitTriggers,
     );
     await this.#httpClient.replacePipeline(pipelineId, pipeline);
     logger.log(
-      '✅ Following git triggers were enabled:\n\t',
+      `[Pipeline #${pipelineId}] Following git triggers were enabled: `,
       disabledGitTriggers,
     );
 
@@ -134,7 +144,7 @@ export class PipelineService {
       DISABLED_TRIGGERS_KEY,
     );
     logger.log(
-      `✅ "${DISABLED_TRIGGERS_KEY}" annotation was deleted from the pipeline`,
+      `[Pipeline #${pipelineId}] "${DISABLED_TRIGGERS_KEY}" annotation was deleted from the pipeline`,
     );
   }
 
@@ -147,7 +157,7 @@ export class PipelineService {
     );
     if (!deletedTriggersAnnotation?.value) {
       logger.log(
-        '📃 There are no previously deleted triggers, nothing to create',
+        `[Pipeline #${pipelineId}] There are no previously deleted triggers, nothing to create`,
       );
       return;
     }
@@ -155,11 +165,15 @@ export class PipelineService {
     const deletedTriggers: Trigger<true>[] = JSON.parse(
       new TextDecoder().decode(base64.decode(deletedTriggersAnnotation.value)),
     );
+    logger.debug(
+      `[Pipeline #${pipelineId}] Triggers to be created:`,
+      deletedTriggers,
+    );
     const deletedTriggersURIs = deletedTriggers.map((trigger) =>
       trigger['event-data'].uri
     );
     logger.log(
-      '📃 Following triggers will be created:\n\t',
+      `[Pipeline #${pipelineId}] Following triggers will be created: `,
       deletedTriggersURIs,
     );
     await Promise.all(
@@ -172,7 +186,7 @@ export class PipelineService {
       ),
     );
     logger.log(
-      '✅ Following triggers were created:\n\t',
+      `[Pipeline #${pipelineId}] Following triggers were created: `,
       deletedTriggersURIs,
     );
 
@@ -182,7 +196,7 @@ export class PipelineService {
       DELETED_TRIGGERS_KEY,
     );
     logger.log(
-      `✅ "${DELETED_TRIGGERS_KEY}" annotation was deleted from the pipeline`,
+      `[Pipeline #${pipelineId}] "${DELETED_TRIGGERS_KEY}" annotation was deleted from the pipeline`,
     );
   }
 
@@ -196,5 +210,26 @@ export class PipelineService {
       this.#enableGitTriggers(pipelineId, annotations),
       this.#createTriggers(pipelineId, annotations),
     ]);
+  }
+
+  public async bulkProjectAction(
+    projectId: string,
+    action: keyof Pick<
+      this,
+      | 'disableGitTriggersByPipeline'
+      | 'deleteTriggersByPipeline'
+      | 'reenableTriggers'
+    >,
+  ): Promise<void> {
+    const pipelinesGenerator = this.#httpClient.getAllPipelinesGenerator({
+      projectId,
+      limit: 20,
+    });
+
+    for await (const pipelines of pipelinesGenerator) {
+      await Promise.all(pipelines.docs.map((pipeline) => {
+        return this[action](pipeline.metadata.id);
+      }));
+    }
   }
 }

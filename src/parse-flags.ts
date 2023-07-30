@@ -4,11 +4,13 @@ import { parseDenoFlags } from './deps.ts';
 import { ValidationError } from './errors.ts';
 import { loadCLIConfig } from './load-cli-config.ts';
 import { logger } from './logger.service.ts';
-import type { CLIArguments, Command } from './types.ts';
+
+import type { CLIArguments, Command, Flags } from './types.ts';
 
 const isKnownCommand = (
   command: string,
 ): command is Command => {
+  // deno-lint-ignore no-explicit-any
   return COMMANDS.includes(<any> command);
 };
 
@@ -34,7 +36,14 @@ export const parseFlags = async (
   }
 
   const parsedFlags = parseDenoFlags(flags, {
-    string: ['pipeline-id', 'token', 'host', 'cfconfig', 'cfconfig-context'],
+    string: [
+      'pipeline-id',
+      'project-id',
+      'token',
+      'host',
+      'cfconfig',
+      'cfconfig-context',
+    ],
     boolean: ['terminate-builds', 'delete-triggers', 'use-cfconfig'],
     default: {
       'terminate-builds': false,
@@ -74,9 +83,15 @@ export const parseFlags = async (
     );
   }
 
-  if (!parsedFlags['pipeline-id']) {
+  if (!parsedFlags['pipeline-id'] && !parsedFlags['project-id']) {
     throw new ValidationError(
-      'Pipeline ID was not defined. Please use "--pipeline-id" flag',
+      'Neither Pipeline ID nor Project ID has been defined. Please use "--pipeline-id" or "--project-id" flag',
+    );
+  }
+
+  if (parsedFlags['pipeline-id'] && parsedFlags['project-id']) {
+    throw new ValidationError(
+      'Both Pipeline ID and Project ID have been defined. Please choose "--pipeline-id" or "--project-id" flag',
     );
   }
 
@@ -84,10 +99,11 @@ export const parseFlags = async (
     command,
     flags: {
       pipelineId: parsedFlags['pipeline-id'],
+      projectId: parsedFlags['project-id'],
       token: parsedFlags['token'],
       terminateBuilds: parsedFlags['terminate-builds'],
       deleteTriggers: parsedFlags['delete-triggers'],
       host: parsedFlags['host'],
-    },
+    } as Flags,
   };
 };
