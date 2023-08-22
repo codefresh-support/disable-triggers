@@ -177,6 +177,7 @@ export class CodefreshHttpClient {
     entityId: string,
     entityType: EntityType,
     key: string,
+    // deno-lint-ignore no-explicit-any
     value: any,
   ): Promise<Annotation | false> {
     const url = new URL(
@@ -201,6 +202,7 @@ export class CodefreshHttpClient {
     entityId: string,
     entityType: EntityType,
     key: string,
+    // deno-lint-ignore no-explicit-any
   ): Promise<any> {
     const url = new URL(
       `api/annotations`,

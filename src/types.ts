@@ -2,14 +2,25 @@ import { COMMANDS } from './const.ts';
 
 //  API
 
-export interface GitTrigger {
-  type: 'git';
+interface SpecTrigger {
   name: string;
   disabled: boolean;
+  id: string;
+}
+
+export interface GitTrigger extends SpecTrigger {
+  type: 'git';
+}
+
+export interface CronTrigger extends SpecTrigger {
+  type: 'cron';
 }
 
 export interface Pipeline {
-  spec: { triggers: GitTrigger[] };
+  spec: {
+    triggers: GitTrigger[];
+    cronTriggers?: CronTrigger[];
+  };
   metadata: {
     id: string;
     name: string;

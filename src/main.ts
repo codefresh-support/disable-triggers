@@ -24,7 +24,7 @@ try {
     await Promise.all([
       ...(flags.pipelineId
         ? [
-          service.disableGitTriggersByPipeline(flags.pipelineId),
+          service.disableSpecTriggersByPipeline(flags.pipelineId),
           ...(flags.deleteTriggers
             ? [service.deleteTriggersByPipeline(flags.pipelineId)]
             : []),
@@ -34,7 +34,7 @@ try {
         ? [
           service.bulkProjectAction(
             flags.projectId,
-            'disableGitTriggersByPipeline',
+            'disableSpecTriggersByPipeline',
           ),
           ...(flags.deleteTriggers
             ? [
