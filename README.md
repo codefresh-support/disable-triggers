@@ -12,19 +12,20 @@ Please dowload latest binary from
 
 ### `cf-triggers disable`
 
-It disables git triggers (with optional removal of non-git ones) and stores all
-disabled/removed triggers in pipeline annotations `disabled_git_triggers` and
-`deleted_triggers`.
+It disables in-spec triggers (with optional removal of other ones) and stores
+all disabled/removed triggers in pipeline annotations `disabled_git_triggers`,
+`disabled_cron_triggers` and `deleted_triggers`.
 
 #### Flags
 
 - `--token` [ required ] — your codefresh token. Will be ignored if
   `--use-cfconfig` was set.
-- `--pipeline-id` [ required unless `--project-id` is set ] — ID of target pipeline.
-- `--project-id` [ required unless `--pipeline-id` is set ] — ID of target project.
-- `--delete-triggers` [ optional, defaults to `false` ] — if set, non-git
-  triggers will be removed. It's impossible to _disable_ non-git triggers, so
-  the only way is to delete them.
+- `--pipeline-id` [ required unless `--project-id` is set ] — ID of target
+  pipeline.
+- `--project-id` [ required unless `--pipeline-id` is set ] — ID of target
+  project.
+- `--delete-triggers` [ optional, defaults to `false` ] — if set, triggers that
+  non in a pipeline spec will be removed (old cron triggers, registry, helm).
 - `--host` [ optional, defaults to `https://g.codefresh.io` ] — if set, will be
   used for API calls. Will be ignored if `--use-cfconfig` was set.
 - `--use-cfconfig` [ optional, defaults to `false` ] — if `true`, uses token and
@@ -57,7 +58,8 @@ $ cf-triggers disable --use-cfconfig --pipeline-id=<target-pipeline-id>
 ### `cf-triggers enable`
 
 It enables git triggers and recreates non-git triggers in accordance with
-`disabled_git_triggers` and `deleted_triggers` annotations of target pipeline.
+`disabled_git_triggers`, `disabled_cron_triggers` and `deleted_triggers`
+annotations of target pipeline.
 
 Once it's done, it removes the above annotations.
 

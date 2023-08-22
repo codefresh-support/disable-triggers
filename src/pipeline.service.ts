@@ -1,4 +1,8 @@
-import { DELETED_TRIGGERS_KEY, DISABLED_TRIGGERS_KEY } from './const.ts';
+import {
+  DELETED_TRIGGERS_KEY,
+  DISABLED_CRON_TRIGGERS_KEY,
+  DISABLED_GIT_TRIGGERS_KEY,
+} from './const.ts';
 import { base64 } from './deps.ts';
 import { logger } from './logger.service.ts';
 
@@ -12,50 +16,76 @@ export class PipelineService {
     this.#httpClient = httpClinet;
   }
 
-  public async disableGitTriggersByPipeline(pipelineId: string): Promise<void> {
+  public async disableSpecTriggersByPipeline(
+    pipelineId: string,
+  ): Promise<void> {
     const pipeline = await this.#httpClient.getPipeline(pipelineId);
 
     const enabledGitTriggers = pipeline.spec.triggers.filter((trigger) =>
       !trigger.disabled
     );
+    const enabledCronTriggers = pipeline.spec.cronTriggers?.filter((trigger) =>
+      !trigger.disabled
+    );
 
-    if (enabledGitTriggers.length === 0) {
+    if (enabledGitTriggers.length === 0 && enabledCronTriggers?.length === 0) {
       logger.log(
-        `[Pipeline #${pipelineId}] There are no enabled git triggers, nothing to disable`,
+        `[Pipeline #${pipelineId}] There are no enabled triggers, nothing to disable`,
       );
       return;
     }
 
     const gitTriggersToDisable = enabledGitTriggers.map((trigger) => {
       trigger.disabled = true;
-      return trigger.name;
+      return trigger.id;
+    });
+    const cronTriggersToDisable = enabledCronTriggers?.map((trigger) => {
+      trigger.disabled = true;
+      return trigger.id;
     });
     logger.log(
-      `[Pipeline #${pipelineId}] Following git triggers will be disabled: `,
+      `[Pipeline #${pipelineId}] Following triggers will be disabled: `,
       gitTriggersToDisable,
+      cronTriggersToDisable,
     );
 
     await this.#httpClient.replacePipeline(pipelineId, pipeline);
     logger.log(
-      `[Pipeline #${pipelineId}] Following git triggers were disabled: `,
+      `[Pipeline #${pipelineId}] Following triggers were disabled: `,
       gitTriggersToDisable,
+      cronTriggersToDisable,
     );
 
-    const annotation = await this.#httpClient.createAnntotation(
-      pipelineId,
-      'pipeline',
-      DISABLED_TRIGGERS_KEY,
-      gitTriggersToDisable,
-    );
-    if (annotation) {
-      logger.log(
-        `[Pipeline #${pipelineId}] "${DISABLED_TRIGGERS_KEY}" annotation was added to the pipeline`,
+    const [gitAnnotation, cronAnnotation] = await Promise.all([
+      this.#httpClient.createAnntotation(
+        pipelineId,
+        'pipeline',
+        DISABLED_GIT_TRIGGERS_KEY,
+        gitTriggersToDisable,
+      ),
+      this.#httpClient.createAnntotation(
+        pipelineId,
+        'pipeline',
+        DISABLED_CRON_TRIGGERS_KEY,
+        cronTriggersToDisable,
+      ),
+    ]);
+
+    gitAnnotation
+      ? logger.log(
+        `[Pipeline #${pipelineId}] "${DISABLED_GIT_TRIGGERS_KEY}" annotation was added to the pipeline`,
+      )
+      : logger.error(
+        `[Pipeline #${pipelineId}] Unable to add "${DISABLED_GIT_TRIGGERS_KEY}" annotation`,
       );
-    } else {
-      logger.error(
-        `[Pipeline #${pipelineId}] Unable to add "${DISABLED_TRIGGERS_KEY}" annotation`,
+
+    cronAnnotation
+      ? logger.log(
+        `[Pipeline #${pipelineId}] "${DISABLED_CRON_TRIGGERS_KEY}" annotation was added to the pipeline`,
+      )
+      : logger.error(
+        `[Pipeline #${pipelineId}] Unable to add "${DISABLED_CRON_TRIGGERS_KEY}" annotation`,
       );
-    }
   }
 
   public async deleteTriggersByPipeline(pipelineId: string): Promise<void> {
@@ -105,46 +135,88 @@ export class PipelineService {
     }
   }
 
-  async #enableGitTriggers(
+  async #enableSpecTriggers(
     pipelineId: string,
     annotations: Annotation[],
   ): Promise<void> {
-    const pipeline = await this.#httpClient.getPipeline(pipelineId);
-    const disabledTriggersAnnotation = annotations.find((annotation) =>
-      annotation.key === DISABLED_TRIGGERS_KEY
-    );
-    const disabledGitTriggers = <
-      | string[]
-      | undefined
-    > disabledTriggersAnnotation?.value;
-    if (!disabledGitTriggers) {
+    let disabledGitTriggersAnnotation: Annotation | undefined;
+    let disabledCronTriggersAnnotation: Annotation | undefined;
+    annotations.forEach((annotation) => {
+      if (annotation.key === DISABLED_GIT_TRIGGERS_KEY) {
+        disabledGitTriggersAnnotation = annotation;
+      }
+      if (annotation.key === DISABLED_CRON_TRIGGERS_KEY) {
+        disabledCronTriggersAnnotation = annotation;
+      }
+    });
+
+    if (!disabledGitTriggersAnnotation && !disabledCronTriggersAnnotation) {
       logger.log(
-        `[Pipeline #${pipelineId}] There are no previously disabled git triggers, nothing to enable`,
+        `[Pipeline #${pipelineId}] There are no previously disabled triggers, nothing to enable`,
       );
       return;
     }
-    pipeline.spec.triggers.forEach((trigger) => {
-      if (disabledGitTriggers.includes(trigger.name)) {
-        trigger.disabled = false;
-      }
-    });
-    logger.log(
-      `[Pipeline #${pipelineId}] Following git triggers will be enabled: `,
-      disabledGitTriggers,
-    );
+
+    const pipeline = await this.#httpClient.getPipeline(pipelineId);
+
+    const disabledGitTriggers: string[] | undefined =
+      disabledGitTriggersAnnotation?.value;
+    const disabledCronTriggers: string[] | undefined =
+      disabledCronTriggersAnnotation?.value;
+
+    if (disabledGitTriggers?.length) {
+      pipeline.spec.triggers.forEach((trigger) => {
+        if (disabledGitTriggers?.includes(trigger.id)) {
+          trigger.disabled = false;
+        }
+      });
+      logger.log(
+        `[Pipeline #${pipelineId}] Following git triggers will be enabled: `,
+        disabledGitTriggers,
+      );
+    }
+
+    if (disabledCronTriggers?.length) {
+      pipeline.spec.cronTriggers?.forEach((trigger) => {
+        if (disabledCronTriggers?.includes(trigger.id)) {
+          trigger.disabled = false;
+        }
+      });
+      logger.log(
+        `[Pipeline #${pipelineId}] Following cron triggers will be enabled: `,
+        disabledCronTriggers,
+      );
+    }
+
     await this.#httpClient.replacePipeline(pipelineId, pipeline);
     logger.log(
-      `[Pipeline #${pipelineId}] Following git triggers were enabled: `,
+      `[Pipeline #${pipelineId}] Following triggers were enabled: `,
       disabledGitTriggers,
+      disabledCronTriggers,
     );
 
-    await this.#httpClient.deleteAnntotation(
-      pipelineId,
-      'pipeline',
-      DISABLED_TRIGGERS_KEY,
+    await Promise.all([
+      ...(disabledGitTriggersAnnotation
+        ? [this.#httpClient.deleteAnntotation(
+          pipelineId,
+          'pipeline',
+          DISABLED_GIT_TRIGGERS_KEY,
+        )]
+        : []),
+      ...(disabledCronTriggersAnnotation
+        ? [this.#httpClient.deleteAnntotation(
+          pipelineId,
+          'pipeline',
+          DISABLED_CRON_TRIGGERS_KEY,
+        )]
+        : []),
+    ]);
+
+    disabledGitTriggersAnnotation && logger.log(
+      `[Pipeline #${pipelineId}] "${DISABLED_GIT_TRIGGERS_KEY}" annotation was deleted from the pipeline`,
     );
-    logger.log(
-      `[Pipeline #${pipelineId}] "${DISABLED_TRIGGERS_KEY}" annotation was deleted from the pipeline`,
+    disabledCronTriggersAnnotation && logger.log(
+      `[Pipeline #${pipelineId}] "${DISABLED_CRON_TRIGGERS_KEY}" annotation was deleted from the pipeline`,
     );
   }
 
@@ -207,7 +279,7 @@ export class PipelineService {
     );
 
     await Promise.all([
-      this.#enableGitTriggers(pipelineId, annotations),
+      this.#enableSpecTriggers(pipelineId, annotations),
       this.#createTriggers(pipelineId, annotations),
     ]);
   }
@@ -216,7 +288,7 @@ export class PipelineService {
     projectId: string,
     action: keyof Pick<
       this,
-      | 'disableGitTriggersByPipeline'
+      | 'disableSpecTriggersByPipeline'
       | 'deleteTriggersByPipeline'
       | 'reenableTriggers'
     >,
